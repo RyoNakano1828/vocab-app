@@ -1,0 +1,29 @@
+# Node / Next.js
+node_modules/
+.next/
+out/
+dist/
+build/
+
+# Local env files (do NOT commit real credentials)
+.env.local
+.env.*.local
+.env.test
+
+# Keep an example env in the repo
+!.env.example
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Logs
+npm-debug.log*
+yarn-error.log*
+
+# Coverage
+coverage/
+
+# Misc
+/public/static/snapshots/
