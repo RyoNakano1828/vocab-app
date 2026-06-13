@@ -9,6 +9,32 @@ ALTER TABLE examples ENABLE ROW LEVEL SECURITY;
 ALTER TABLE uploads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_progress ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies if any (idempotent)
+DROP POLICY IF EXISTS users_select_self ON users;
+DROP POLICY IF EXISTS users_insert_self ON users;
+DROP POLICY IF EXISTS users_update_self ON users;
+DROP POLICY IF EXISTS users_delete_self ON users;
+
+DROP POLICY IF EXISTS words_select_owner ON words;
+DROP POLICY IF EXISTS words_insert_owner ON words;
+DROP POLICY IF EXISTS words_update_owner ON words;
+DROP POLICY IF EXISTS words_delete_owner ON words;
+
+DROP POLICY IF EXISTS examples_select_owner ON examples;
+DROP POLICY IF EXISTS examples_insert_owner ON examples;
+DROP POLICY IF EXISTS examples_update_owner ON examples;
+DROP POLICY IF EXISTS examples_delete_owner ON examples;
+
+DROP POLICY IF EXISTS uploads_select_owner ON uploads;
+DROP POLICY IF EXISTS uploads_insert_owner ON uploads;
+DROP POLICY IF EXISTS uploads_update_owner ON uploads;
+DROP POLICY IF EXISTS uploads_delete_owner ON uploads;
+
+DROP POLICY IF EXISTS user_progress_select_owner ON user_progress;
+DROP POLICY IF EXISTS user_progress_insert_owner ON user_progress;
+DROP POLICY IF EXISTS user_progress_update_owner ON user_progress;
+DROP POLICY IF EXISTS user_progress_delete_owner ON user_progress;
+
 -- --------------------------------------------------
 -- users table policies
 -- --------------------------------------------------
@@ -42,7 +68,7 @@ CREATE POLICY words_select_owner ON words
   USING (
     EXISTS (
       SELECT 1 FROM users u
-      WHERE u.id = words.user_id AND u.auth_id = auth.uid() AND u.deleted_at IS NULL
+      WHERE u.id = user_id AND u.auth_id = auth.uid() AND u.deleted_at IS NULL
     )
   );
 
@@ -52,7 +78,7 @@ CREATE POLICY words_insert_owner ON words
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM users u
-      WHERE u.id = words.user_id AND u.auth_id = auth.uid() AND u.deleted_at IS NULL
+      WHERE u.id = user_id AND u.auth_id = auth.uid() AND u.deleted_at IS NULL
     )
   );
 
@@ -62,13 +88,13 @@ CREATE POLICY words_update_owner ON words
   USING (
     EXISTS (
       SELECT 1 FROM users u
-      WHERE u.id = words.user_id AND u.auth_id = auth.uid() AND u.deleted_at IS NULL
+      WHERE u.id = user_id AND u.auth_id = auth.uid() AND u.deleted_at IS NULL
     )
   )
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM users u
-      WHERE u.id = NEW.user_id AND u.auth_id = auth.uid() AND u.deleted_at IS NULL
+      WHERE u.id = user_id AND u.auth_id = auth.uid() AND u.deleted_at IS NULL
     )
   );
 
@@ -78,7 +104,7 @@ CREATE POLICY words_delete_owner ON words
   USING (
     EXISTS (
       SELECT 1 FROM users u
-      WHERE u.id = words.user_id AND u.auth_id = auth.uid() AND u.deleted_at IS NULL
+      WHERE u.id = user_id AND u.auth_id = auth.uid() AND u.deleted_at IS NULL
     )
   );
 
@@ -91,7 +117,7 @@ CREATE POLICY examples_select_owner ON examples
   USING (
     EXISTS (
       SELECT 1 FROM users u
-      WHERE u.id = examples.user_id AND u.auth_id = auth.uid() AND u.deleted_at IS NULL
+      WHERE u.id = user_id AND u.auth_id = auth.uid() AND u.deleted_at IS NULL
     )
   );
 
@@ -101,11 +127,11 @@ CREATE POLICY examples_insert_owner ON examples
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM users u
-      WHERE u.id = NEW.user_id AND u.auth_id = auth.uid() AND u.deleted_at IS NULL
+      WHERE u.id = user_id AND u.auth_id = auth.uid() AND u.deleted_at IS NULL
     )
     AND EXISTS (
       SELECT 1 FROM words w
-      WHERE w.id = NEW.word_id AND w.user_id = NEW.user_id AND w.deleted_at IS NULL
+      WHERE w.id = word_id AND w.user_id = user_id AND w.deleted_at IS NULL
     )
   );
 
@@ -115,17 +141,17 @@ CREATE POLICY examples_update_owner ON examples
   USING (
     EXISTS (
       SELECT 1 FROM users u
-      WHERE u.id = examples.user_id AND u.auth_id = auth.uid() AND u.deleted_at IS NULL
+      WHERE u.id = user_id AND u.auth_id = auth.uid() AND u.deleted_at IS NULL
     )
   )
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM users u
-      WHERE u.id = NEW.user_id AND u.auth_id = auth.uid() AND u.deleted_at IS NULL
+      WHERE u.id = user_id AND u.auth_id = auth.uid() AND u.deleted_at IS NULL
     )
     AND EXISTS (
       SELECT 1 FROM words w
-      WHERE w.id = NEW.word_id AND w.user_id = NEW.user_id AND w.deleted_at IS NULL
+      WHERE w.id = word_id AND w.user_id = user_id AND w.deleted_at IS NULL
     )
   );
 
@@ -135,7 +161,7 @@ CREATE POLICY examples_delete_owner ON examples
   USING (
     EXISTS (
       SELECT 1 FROM users u
-      WHERE u.id = examples.user_id AND u.auth_id = auth.uid() AND u.deleted_at IS NULL
+      WHERE u.id = user_id AND u.auth_id = auth.uid() AND u.deleted_at IS NULL
     )
   );
 
@@ -148,7 +174,7 @@ CREATE POLICY uploads_select_owner ON uploads
   USING (
     EXISTS (
       SELECT 1 FROM users u
-      WHERE u.id = uploads.user_id AND u.auth_id = auth.uid() AND u.deleted_at IS NULL
+      WHERE u.id = user_id AND u.auth_id = auth.uid() AND u.deleted_at IS NULL
     )
   );
 
@@ -158,7 +184,7 @@ CREATE POLICY uploads_insert_owner ON uploads
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM users u
-      WHERE u.id = NEW.user_id AND u.auth_id = auth.uid() AND u.deleted_at IS NULL
+      WHERE u.id = user_id AND u.auth_id = auth.uid() AND u.deleted_at IS NULL
     )
   );
 
@@ -168,13 +194,13 @@ CREATE POLICY uploads_update_owner ON uploads
   USING (
     EXISTS (
       SELECT 1 FROM users u
-      WHERE u.id = uploads.user_id AND u.auth_id = auth.uid() AND u.deleted_at IS NULL
+      WHERE u.id = user_id AND u.auth_id = auth.uid() AND u.deleted_at IS NULL
     )
   )
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM users u
-      WHERE u.id = NEW.user_id AND u.auth_id = auth.uid() AND u.deleted_at IS NULL
+      WHERE u.id = user_id AND u.auth_id = auth.uid() AND u.deleted_at IS NULL
     )
   );
 
@@ -183,7 +209,7 @@ CREATE POLICY uploads_delete_owner ON uploads
   USING (
     EXISTS (
       SELECT 1 FROM users u
-      WHERE u.id = uploads.user_id AND u.auth_id = auth.uid() AND u.deleted_at IS NULL
+      WHERE u.id = user_id AND u.auth_id = auth.uid() AND u.deleted_at IS NULL
     )
   );
 
@@ -196,7 +222,7 @@ CREATE POLICY user_progress_select_owner ON user_progress
   USING (
     EXISTS (
       SELECT 1 FROM users u
-      WHERE u.id = user_progress.user_id AND u.auth_id = auth.uid() AND u.deleted_at IS NULL
+      WHERE u.id = user_id AND u.auth_id = auth.uid() AND u.deleted_at IS NULL
     )
   );
 
@@ -206,11 +232,11 @@ CREATE POLICY user_progress_insert_owner ON user_progress
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM users u
-      WHERE u.id = NEW.user_id AND u.auth_id = auth.uid() AND u.deleted_at IS NULL
+      WHERE u.id = user_id AND u.auth_id = auth.uid() AND u.deleted_at IS NULL
     )
     AND EXISTS (
       SELECT 1 FROM words w
-      WHERE w.id = NEW.word_id AND w.user_id = NEW.user_id AND w.deleted_at IS NULL
+      WHERE w.id = word_id AND w.user_id = user_id AND w.deleted_at IS NULL
     )
   );
 
@@ -220,17 +246,17 @@ CREATE POLICY user_progress_update_owner ON user_progress
   USING (
     EXISTS (
       SELECT 1 FROM users u
-      WHERE u.id = user_progress.user_id AND u.auth_id = auth.uid() AND u.deleted_at IS NULL
+      WHERE u.id = user_id AND u.auth_id = auth.uid() AND u.deleted_at IS NULL
     )
   )
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM users u
-      WHERE u.id = NEW.user_id AND u.auth_id = auth.uid() AND u.deleted_at IS NULL
+      WHERE u.id = user_id AND u.auth_id = auth.uid() AND u.deleted_at IS NULL
     )
     AND EXISTS (
       SELECT 1 FROM words w
-      WHERE w.id = NEW.word_id AND w.user_id = NEW.user_id AND w.deleted_at IS NULL
+      WHERE w.id = word_id AND w.user_id = user_id AND w.deleted_at IS NULL
     )
   );
 
@@ -240,7 +266,7 @@ CREATE POLICY user_progress_delete_owner ON user_progress
   USING (
     EXISTS (
       SELECT 1 FROM users u
-      WHERE u.id = user_progress.user_id AND u.auth_id = auth.uid() AND u.deleted_at IS NULL
+      WHERE u.id = user_id AND u.auth_id = auth.uid() AND u.deleted_at IS NULL
     )
   );
 
