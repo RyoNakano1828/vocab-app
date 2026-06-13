@@ -1,69 +1,88 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createClient } from '@supabase/supabase-js';
-import { createWordSchema } from '../../../lib/validators/word';
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-  throw new Error('Missing Supabase environment variables on server');
+if (!SUPABASE_URL || !SERVICE_KEY) {
+  console.warn('Missing Supabase env in /api/words route — ensure NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set');
 }
 
-const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+const supabaseAdmin = createClient(SUPABASE_URL || '', SERVICE_KEY || '', {
   auth: { persistSession: false },
 });
 
-async function getUserFromAuthHeader(authHeader?: string) {
-  if (!authHeader) return null;
-  const parts = authHeader.split(' ');
-  if (parts.length !== 2) return null;
-  const token = parts[1];
-  const { data, error } = await supabaseAdmin.auth.getUser(token);
-  if (error || !data?.user) return null;
-  return data.user;
-}
-
-export async function GET(req: Request) {
-  const authHeader = req.headers.get('authorization') ?? undefined;
-  const user = await getUserFromAuthHeader(authHeader);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const url = new URL(req.url);
-  const query = url.searchParams.get('q') ?? undefined;
-  const limit = Number(url.searchParams.get('limit') ?? '50');
-
-  const { data, error } = await supabaseAdmin
-    .from('words')
-    .select('*')
-    .eq('user_id', user.id)
-    .is('deleted_at', null)
-    .limit(limit);
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ data });
-}
+const createWordSchema = z.object({
+  word: z.string().min(1),
+  language: z.string().optional().default('en'),
+  meaning: z.any().nullable().optional(),
+  phonetic: z.string().nullable().optional(),
+  user_id: z.string().uuid().nullable().optional(),
+  examples: z
+    .array(
+      z.object({
+        sentence: z.string().min(1),
+        translation: z.string().nullable().optional(),
+        metadata: z.any().nullable().optional(),
+      })
+    )
+    .optional()
+    .default([]),
+});
 
 export async function POST(req: Request) {
-  const authHeader = req.headers.get('authorization') ?? undefined;
-  const user = await getUserFromAuthHeader(authHeader);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  try {
+    const body = await req.json();
+    const parsed = createWordSchema.parse(body);
 
-  const body = await req.json();
-  const parse = createWordSchema.safeParse(body);
-  if (!parse.success) {
-    return NextResponse.json({ error: 'Invalid input', details: parse.error.flatten() }, { status: 400 });
+    // Insert the word row
+    const { data: wordRow, error: wordErr } = await supabaseAdmin
+      .from('words')
+      .insert([
+        {
+          user_id: parsed.user_id ?? null,
+          word: parsed.word,
+          language: parsed.language,
+          meaning: parsed.meaning ?? null,
+          phonetic: parsed.phonetic ?? null,
+        },
+      ])
+      .select()
+      .maybeSingle();
+
+    if (wordErr) {
+      console.error('insert word error', wordErr);
+      return NextResponse.json({ error: wordErr.message || String(wordErr) }, { status: 500 });
+    }
+
+    // Insert examples if provided
+    let insertedExamples: any[] = [];
+    if (parsed.examples && parsed.examples.length > 0) {
+      const rows = parsed.examples.map((ex) => ({
+        user_id: parsed.user_id ?? null,
+        word_id: wordRow?.id,
+        sentence: ex.sentence,
+        translation: ex.translation ?? null,
+        metadata: ex.metadata ?? null,
+      }));
+
+      const { data: exData, error: exErr } = await supabaseAdmin.from('examples').insert(rows).select();
+      if (exErr) {
+        console.error('insert examples error', exErr);
+        // Note: we don't roll back the created word here; consider implementing a DB transaction or RPC for atomicity.
+        return NextResponse.json({ error: exErr.message || String(exErr) }, { status: 500 });
+      }
+      insertedExamples = exData || [];
+    }
+
+    return NextResponse.json({ ...wordRow, examples: insertedExamples }, { status: 201 });
+  } catch (err: any) {
+    console.error('/api/words POST error', err);
+    if (err?.issues) {
+      // Zod validation errors
+      return NextResponse.json({ error: 'validation', details: err.issues }, { status: 400 });
+    }
+    return NextResponse.json({ error: String(err) }, { status: 500 });
   }
-
-  const payload = parse.data;
-
-  const { data, error } = await supabaseAdmin
-    .from('words')
-    .insert([{ user_id: user.id, word: payload.word, language: payload.language, meaning: payload.meaning, phonetic: payload.phonetic, metadata: payload.metadata }])
-    .select()
-    .single();
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-  return NextResponse.json({ data }, { status: 201 });
 }
