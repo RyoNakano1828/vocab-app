@@ -148,8 +148,12 @@ export default function Page() {
       <section style={{ marginTop: 20 }}>
         <h2>Notes for integrators</h2>
         <ul>
-          <li>/api/ai/generate-sentence should accept POST {{ words: [string] }} and return a JSON containing an example at data.examples[0].sentence or example/text.</li>
-          <li>/api/words should accept POST to create a word row. Response handling in this page is tolerant to several shapes (created row or {{ data: row }}).</li>
+          <li>
+            /api/ai/generate-sentence should accept POST <code>{'{ "words": ["string"] }'}</code> and return a JSON containing an example at data.examples[0].sentence or example/text.
+          </li>
+          <li>
+            /api/words should accept POST to create a word row. Response handling in this page is tolerant to several shapes (created row or <code>{'{ data: row }'}</code>).
+          </li>
           <li>After saving, consider redirecting users to your learning flow (e.g. /learn/[id]) — this page leaves that step manual intentionally.</li>
         </ul>
       </section>
